@@ -1,0 +1,54 @@
+services:
+  pg-primary:
+    image: postgres:18-alpine
+    container_name: pg-primary
+    env_file: .env
+    restart: unless-stopped
+    ports:
+      - "${PG_PRIMARY_PORT}:5432"
+    networks:
+      - pg-network
+    volumes:
+      - primary-data:/var/lib/postgresql
+      - ./primary:/docker-entrypoint-initdb.d
+
+  pg-replica1:
+    image: postgres:18-alpine
+    container_name: pg-replica1
+    env_file: .env
+    restart: on-failure:5
+    ports:
+      - "${PG_REPLICA1_PORT}:5432"
+    networks:
+      - pg-network
+    volumes:
+      - replica1-data:/var/lib/postgresql
+      - ./replica/replica-entrypoint.sh:/usr/local/bin/replica-entrypoint.sh:ro
+    depends_on:
+      - pg-primary
+    entrypoint: [ "/usr/local/bin/replica-entrypoint.sh" ]
+
+  pg-replica2:
+    image: postgres:18-alpine
+    container_name: pg-replica2
+    env_file: .env
+    restart: on-failure:5
+    ports:
+      - "${PG_REPLICA2_PORT}:5432"
+    networks:
+      - pg-network
+    volumes:
+      - replica2-data:/var/lib/postgresql
+      - ./replica/replica-entrypoint.sh:/usr/local/bin/replica-entrypoint.sh:ro
+    depends_on:
+      - pg-primary
+    entrypoint: [ "/usr/local/bin/replica-entrypoint.sh" ]
+
+networks:
+  pg-network:
+    driver: bridge
+
+volumes:
+  primary-data:
+  replica1-data:
+  replica2-data:
